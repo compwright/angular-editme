@@ -1,6 +1,6 @@
 'use strict';
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 (function (root, factory) {
   // AMD
@@ -34,6 +34,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       scope: {
         isEditing: '=?',
         hideIcon: '=?',
+        allowEnterKey: '=?',
         onStateChange: '&?',
         onInvalid: '&?',
         onChange: '&?'
@@ -44,69 +45,40 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         };
       },
       link: link,
-      transclude: true,
-      template: '\n        <div ng-click="toggleEdit(true)" ng-class="{\'editme-touch\': isTouchEnabled}">\n          <span ng-hide="isEditing" class="model-wrapper" ng-class="{\'hide-icon\': hideIcon}">\n            <span class="model-content" ng-class="{\'edit-active\': showEditHint}">{{model}}</span>\n            <sk-editme-icon ng-class="{\'edit-active\': showEditHint}" ng-if="!isEditing && !hideIcon"></sk-editme-icon>\n          </span>\n          <content ng-show="isEditing"></content>\n        </div>\n      '
+      transclude: {
+        static: '?static',
+        editable: '?editable'
+      },
+      template: '\n        <div ng-click="toggleEdit(true)" ng-class="{\'editme-touch\': isTouchEnabled}">\n          <span ng-hide="isEditing" class="model-wrapper" ng-class="{\'hide-icon\': hideIcon}">\n            <span class="model-content" ng-transclude="static">{{model}}</span>\n            <sk-editme-icon ng-if="!isEditing && !hideIcon"></sk-editme-icon>\n          </span>\n          <div ng-transclude="editable" ng-show="isEditing"></div>\n        </div>\n      '
     };
 
     return directive;
 
     function link(scope, element, attrs, ctrl, transclude) {
-      var $content = element.find('content');
       var $input = undefined;
       var ngModel = undefined;
       var prevValue = undefined;
-      var $static = angular.element(element[0].querySelector('.model-content'));
       var KEYS = {
         ENTER: 13
       };
-      var VALID_INPUT_TYPES = ['text', 'url', 'date', 'email', 'week', 'month', 'number', 'time'];
+      var VALID_ELEMENTS = ['input[type="text"]', 'input[type="url"]', 'input[type="date"]', 'input[type="email"]', 'input[type="week"]', 'input[type="month"]', 'input[type="number"]', 'input[type="time"]', 'textarea'];
 
       if ('ontouchstart' in document.documentElement) {
         scope.isTouchEnabled = true;
       }
 
       scope.showIcon = scope.showIcon || true;
+      scope.allowEnterKey = scope.allowEnterKey || false;
 
-      transclude(transcludeFn);
-
-      $static.on('mouseover', function () {
-        scope.showEditHint = true;
-        scope.$apply();
-      });
-
-      $static.on('mouseout', function () {
-        scope.showEditHint = false;
-        scope.$apply();
-      });
-
-      function transcludeFn(clone, innerScope) {
-        var inputTypePattern = new RegExp(VALID_INPUT_TYPES.join('|'), 'gi');
-
+      $timeout(function () {
         // This will ensure only valid elements are matched
-        var input = Array.prototype.filter.call(clone, function (el) {
-          var isInputEl = el.nodeName.toLowerCase() === 'input';
-          var isTextareaEl = el.nodeName.toLowerCase() === 'textarea';
+        var input = element[0].querySelectorAll(VALID_ELEMENTS.join(','));
 
-          if (isTextareaEl) {
-            return true;
-          }
-
-          if (isInputEl) {
-            var type = el.getAttribute('type') || '';
-            return type.search(inputTypePattern) > -1;
-          }
-
-          return false;
-        });
-
-        $input = angular.element(input);
-
-        if (!$input.length || $input.length > 1) {
+        if (input.length !== 1) {
           throw new Error('skEditme could not find valid input or textarea element. Please see docs for valid element types.');
         }
 
-        $content.append($compile($input)(innerScope));
-
+        $input = angular.element(input[0]);
         ngModel = $input.controller('ngModel');
 
         if (angular.isUndefined(ngModel)) {
@@ -134,7 +106,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         ngModel.$viewChangeListeners.push(function () {
           scope.model = ngModel.$modelValue;
         });
-      }
+      });
 
       function onIsEditingChange(value) {
         if (value) {
@@ -157,17 +129,14 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       }
 
       function validate(evt) {
-        if (evt.type !== 'blur' && evt.keyCode !== KEYS.ENTER) {
-          return;
+        if (evt.type === 'blur' || evt.keyCode === KEYS.ENTER && !scope.allowEnterKey) {
+          scope.isEditing = ngModel.$invalid && ngModel.$dirty;
+          scope.$apply();
+
+          if (ngModel.$error && scope.onInvalid) {
+            scope.onInvalid({ $error: angular.copy(ngModel.$error) });
+          }
         }
-
-        var isEditing = false;
-        var isModelEmpty = angular.isDefined(scope.model) ? scope.model.search(/\w+/g) < 0 : true;
-
-        isEditing = isModelEmpty ? true : ngModel.$ivalid && ngModel.$dirty;
-
-        scope.isEditing = isEditing;
-        scope.$apply();
       }
     }
   });
