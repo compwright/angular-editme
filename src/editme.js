@@ -37,15 +37,16 @@
     let directive = {
       scope : {
         isEditing: '=?',
-        hideIcon: '=?',
-        allowEnterKey: '=?',
+        hideIcon: '<?',
+        submitOnEnterKey: '<?',
+        submitOnBlur: '<?',
         onStateChange: '&?',
         onInvalid: '&?',
         onChange: '&?'
       },
       controller: function($scope) {
         $scope.toggleEdit = (value) => {
-          $scope.isEditing = (value !== undefined) ? value : !$scope.isEditing;
+          $scope.isEditing = typeof value !== 'undefined' ? Boolean(value) : !$scope.isEditing;
         };
       },
       link: link,
@@ -89,8 +90,8 @@
         scope.isTouchEnabled = true;
       }
 
-      scope.showIcon  = scope.showIcon || true;
-      scope.allowEnterKey = scope.allowEnterKey || false;
+      scope.submitOnEnterKey = typeof scope.submitOnEnterKey !== 'undefined' ? scope.submitOnEnterKey : true;
+      scope.submitOnBlur = typeof scope.submitOnBlur !== 'undefined' ? scope.submitOnBlur : true;
 
       $timeout(() => {
         // This will ensure only valid elements are matched
@@ -103,10 +104,20 @@
         $input = angular.element(input[0]);
         ngModel = $input.controller('ngModel');
 
+        // Throw error/warning if invalid element provided
         if (angular.isUndefined(ngModel)) {
           throw new Error('skEditme transcluded element is missing required ng-model directive');
         }
-        //throw error/warning if invalid element provided
+
+        // If the submitOnBlur is disabled, activate the submit button
+        if (scope.submitOnBlur === false) {
+          let submit = element[0].querySelectorAll('button[type="submit"]');
+          if (submit.length !== 1) {
+            throw new Error('skEditme could not find a valid submit button near ' + input[0].outerHTML);
+          } else {
+            angular.element(submit[0]).on('click', validate);
+          }
+        }
 
         // ngModel.$modelView will be initialized as NaN
         // This ensures we don't initiate our scope.model with NaN
@@ -149,8 +160,10 @@
       }
 
       function validate(evt) {
-        if (evt.type === 'blur' ||
-            (evt.keyCode === KEYS.ENTER && !scope.allowEnterKey)) {
+        if ((scope.submitOnBlur && evt.type === 'blur') ||
+            (!scope.submitOnBlur && evt.type === 'click') ||
+            (scope.submitOnEnterKey && evt.keyCode === KEYS.ENTER)) {
+          evt.stopPropagation();
           scope.isEditing = ngModel.$invalid && ngModel.$dirty;
           scope.$apply();
 
