@@ -132,9 +132,10 @@
       <h3>You can use <code>textarea</code>s too</h3>
 
       <div class="form-group">
-        <sk-editme allow-enter-key="true">
+        <sk-editme submit-on-enter-key="false" submit-on-blur="false">
           <editable>
             <textarea class="form-control" rows="8" ng-model="demo.desc" ng-required="true"></textarea>
+            <button type="submit">Save</button>
           </editable>
         </sk-editme>
       </div>

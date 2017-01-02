@@ -55,7 +55,7 @@ To convert an existing input element into an editable element wrap it with the `
     </editable>
   </sk-editme>
 
-  <sk-editme allow-enter-key="true">
+  <sk-editme submit-on-enter-key="false">
     <editable>
       <textarea name="description" ng-model="body" ng-required="true"></textarea>
     </editable>
@@ -158,7 +158,8 @@ All properties are optional.
 <sk-editme
   is-editing="{Boolean}"
   hide-icon="{Boolean}"
-  allow-enter-key="{Boolean}"
+  submit-on-enter-key="{Boolean}"
+  submit-on-blur="{Boolean}"
   on-change="{Expression}"
   on-invalid="{Expression}"
   on-state-change="{Expression}"
@@ -173,10 +174,11 @@ All properties are optional.
 ```
 
 | Name          | Type                 | Description  | Default     |
-| ------------- |:---------------------| -------------| ------------|
+| ------------- | -------------------- | ------------ | ----------- |
 | isEditing     | Boolean              | Can be set to true if you want to start in edit mode | false
 | hideIcon      | Boolean              | Will hide pencil icon if set to true | false
-| allowEnterKey | Boolean              | Disables blurring the form when the Enter key is pressed, so that multi-line inputs can be entered | false
+| submitOnEnterKey | Boolean           | Set to `false` to disable toggling out of edit mode when the Enter key is pressed, so that multi-line inputs can be entered | true
+| submitOnBlur  | Boolean              | Set to `false` to disable toggling out of edit mode when the form element loses focus. Note that you must include a submit button (`<button type="submit">`) in the `<editable />` transclusion slot | true
 | onChange      | Expression(Function) | Expression will be evaluated when input loses focus and the entered value is both changed and valid. The valid value is available as $value. | –
 | onInvalid     | Expression(Function) | Expression will be evaluated when input loses focus and the entered value is invalid. The ngModel error is available as $error. | –
 | onStateChange | Expression(Function) | Expression will be evaluated when the directive changes to and from edit mode. A Boolean value $isEditing is availble to determine the current state. | –
