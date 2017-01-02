@@ -114,7 +114,8 @@
           let submit = element[0].querySelectorAll('button[type="submit"]');
           if (submit.length !== 1) {
             throw new Error('skEditme could not find a valid submit button near ' + input[0].outerHTML);
-          } else {
+          }
+          else {
             angular.element(submit[0]).on('click', validate);
           }
         }
@@ -137,24 +138,22 @@
         });
       });
 
-      function onIsEditingChange(value) {
+      function onIsEditingChange(value, prevValue) {
+        if (value === prevValue) return;
+
         if (value) {
           $timeout(() => $input[0].focus());
-          prevValue = angular.copy(scope.model);
           $input.on('blur keypress', validate);
         }
         else {
           $input.off('blur keypress', validate);
         }
 
-        if (scope.onStateChange && value !== undefined) {
+        if (scope.onStateChange) {
           scope.onStateChange({$isEditing: angular.copy(value)});
         }
 
-        if (scope.onChange &&
-            value === false &&
-            prevValue !== undefined &&
-            prevValue !== scope.model) {
+        if (scope.onChange && value === false && typeof scope.model !== 'undefined') {
           scope.onChange({$value: angular.copy(scope.model)});
         }
       }
